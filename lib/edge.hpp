@@ -21,7 +21,7 @@ struct Edge
     int y_min; // use to determine whether the edge is active
     int x_start; // x coordinate at y_max
     float z_start; // z coordinate at y_max
-    int x_now; // left x coordinate in the current scanline
+    float x_now; // left x coordinate in the current scanline
     const Triangular* triangular; // which triangular it belongs to
     float dx_dy; // (x_max - x_min) / (y_max - y_min)
 
@@ -29,7 +29,7 @@ struct Edge
     Vertex v0, v1; // two vertices
 
     bool operator< (const Edge& edge) const {
-        return (this->y_max > edge.y_max) || (this->y_max == edge.y_max && this->x_start < edge.x_start) || (this->x_start == edge.x_start && this->dx_dy > edge.dx_dy);
+        return (this->y_max > edge.y_max) || (this->y_max == edge.y_max && this->x_start < edge.x_start) || (this->y_max == edge.y_max && this->x_start == edge.x_start && this->dx_dy > edge.dx_dy);
     }
 
     Edge& operator= (const Edge& edge) {
@@ -58,7 +58,7 @@ struct Edge
         this->y_max = this->v0.point.y;
         this->y_min = this->v1.point.y;
         this->x_start = this->v0.point.x;
-        this->dx_dy = (float)(this->v1.point.x - this->v0.point.x) / (float)(this->v1.point.y - this->v0.point.y);
+        this->dx_dy = (double)(this->v1.point.x - this->v0.point.x) / (double)(this->v1.point.y - this->v0.point.y);
         this->z_start = this->v0.z_depth;
     }
 
@@ -101,7 +101,7 @@ struct Edge
     }
 
     void info(){
-        std::cout << this << " v0=" << this->v0.point << ",v1=" << this->v1.point << ",y_max=" << this->y_max << "  "; 
+        std::cout << this << " xnow=" << this->x_now << " v0=" << this->v0.point << ",v1=" << this->v1.point << ",y_max=" << this->y_max << "  "; 
     }
 
 };
@@ -115,13 +115,15 @@ struct EdgePair{
 
     EdgePairType type;
     const Triangular* triangular; // which triangular it belongs to
-    Edge& left;
-    Edge& right;
+    Edge* left = nullptr;
+    Edge* right = nullptr;
     Edge* remain = nullptr;
     
-    EdgePair(Edge& el, const Triangular* triangular): left(el), right(el), triangular(triangular), type(SINGLE) {}
-    EdgePair(Edge& el, Edge& er, const Triangular* triangular): left(el), right(er), triangular(triangular), type(PAIR) {}
-    EdgePair(Edge& el, Edge& er, Edge* pr, const Triangular* triangular): left(el), right(er), remain(pr), triangular(triangular), type(PAIR) {}
+    EdgePair(Edge* el, const Triangular* triangular): left(el), right(el), triangular(triangular), type(SINGLE) {
+        std::cout << "line init" << std::endl;
+    }
+    EdgePair(Edge* el, Edge* er, const Triangular* triangular): left(el), right(er), triangular(triangular), type(PAIR) {}
+    EdgePair(Edge* el, Edge* er, Edge* pr, const Triangular* triangular): left(el), right(er), remain(pr), triangular(triangular), type(PAIR) {}
 
     EdgePair& operator= (const EdgePair& edge_pair) {
         this->type = edge_pair.type;
@@ -134,22 +136,24 @@ struct EdgePair{
 
     bool update(int y_now){
         if (this->type == SINGLE) {
-            return this->left.update(y_now);
+            return this->left->update(y_now);
         }
         else if (this->remain == nullptr) {
-            return this->left.update(y_now) && this->right.update(y_now);
+            return this->left->update(y_now) && this->right->update(y_now);
         }
         else {
-            if (this->left.y_min == y_now) {
-                this->left = *this->remain;
-                this->remain = nullptr;
-                return true;
+            // activate the remain edge
+            this->remain->set_x_now(y_now);
+            this->remain->is_activate = true;
+            // update the old edge
+            if (this->left->y_min == y_now) {
+                this->left = this->remain;
             }
-            else if (this->right.y_min == y_now) {
-                this->right = *this->remain;
-                this->remain = nullptr;
-                return true;
+            else if (this->right->y_min == y_now) {
+                this->right = this->remain;
             }
+            this->remain = nullptr;
+            return true;
         }
         return false;
     }
@@ -157,9 +161,9 @@ struct EdgePair{
     void info(){
         if (this->type == PAIR) {
             std::cout << "\nleft: ";
-            this->left.info();
+            this->left->info();
             std::cout << " right: ";
-            this->right.info();
+            this->right->info();
         }
     }
 };

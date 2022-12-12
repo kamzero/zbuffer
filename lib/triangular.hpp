@@ -29,6 +29,8 @@ public:
     int dy; // y_max - y_min
     int y_max; // use to categorize the triangular
     int y_min; // use to determine whether the triangular is active
+    float dz_dy = 0;
+    float dz_dx = 0;
     TriangularType type = NORMAL;
 
     Triangular(unsigned int id, std::vector<cv::Point2i> points, std::vector<float>z_depths, cv::Vec3f color):id(id), color(color) {
@@ -94,6 +96,8 @@ public:
         cv::Point3f v1 = this->vertices[1].vec() - this->vertices[0].vec();
         cv::Point3f v2 = this->vertices[2].vec() - this->vertices[0].vec();
         this->normal = v1.cross(v2);
+        this-> dz_dy = this->normal.y / this->normal.z;
+        this-> dz_dx = -this->normal.x / this->normal.z;
         return normal;
     }
 
@@ -140,15 +144,15 @@ public:
         // }
     }
 
-    // z_depth increment while y decrease 1
-    float dz_dy(){
-        return this->normal.y / this->normal.z;
-    }
+    // // z_depth increment while y decrease 1
+    // float dz_dy(){
+    //     return this->normal.y / this->normal.z;
+    // }
 
-    // z_depth increment while x increase 1
-    float dz_dx(){
-        return -this->normal.x / this->normal.z;
-    }
+    // // z_depth increment while x increase 1
+    // float dz_dx(){
+    //     return -this->normal.x / this->normal.z;
+    // }
 
     // activate triangular, add intersected edges to active_edges
     EdgePair activate(int y_now) {
@@ -163,19 +167,22 @@ public:
                 remain_edge = &edge;
             }
         }
-        
+
         if (this->active_edges.size() == 2) {
             if (remain_edge != NULL){
-                EdgePair ep(this->active_edges[0], this->active_edges[1], remain_edge, this);
+                EdgePair ep(&(this->active_edges[0]), &(this->active_edges[1]), remain_edge, this);
                 return ep;
             }
             else {
-                EdgePair ep(this->active_edges[0], this->active_edges[1], this);
+                EdgePair ep(&(this->active_edges[0]), &(this->active_edges[1]), this);
                 return ep;
             }
         }
         else{
-            EdgePair ep(this->active_edges[0], this);
+            std::cout << "\n***********ERROR*********** " << y_now << std::endl;
+            EdgePair ep(&(this->active_edges[0]), this);
+            std::cout << "\n***********ERROR*********** " << ep.left->x_start << std::endl;
+
             return ep;
         }
     }

@@ -55,10 +55,12 @@ public:
 
     void update_table(unsigned int y_now){
         for (auto& triangular: this->triangulars[y_now]) {
-            if(triangular.type != Triangular::NORMAL) continue;
-            auto ep = triangular.activate(y_now);
-            // this->active_triangulars.push_back(triangular);
-            this->active_edgepairs.push_back(ep);
+            // if(triangular.type != Triangular::NORMAL) continue;
+
+            if (triangular.type == Triangular::NORMAL || triangular.type == Triangular::NORMAL){
+                auto ep = triangular.activate(y_now);
+                this->active_edgepairs.push_back(ep);
+            }
         }
     }
 

@@ -13,14 +13,24 @@
 #define SCREEN_WIDTH 1920
 #define SCREEN_HEIGHT 1080
 
-cv::Matx44f transform_matrix(0.6330, -0.1116, -0.7660, 0.0468,
-                             -0.2268, 0.9194, -0.3214, -0.0677,
-                             0.7402, 0.3772, 0.5567, -1.4118,
-                             -0.0000, 0.0000, -0.0000, 1.0000);
+// cv::Matx44f transform_matrix(0.6330, -0.1116, -0.7660, 0.0468,
+//                              -0.2268, 0.9194, -0.3214, -0.0677,
+//                              0.7402, 0.3772, 0.5567, -1.4118,
+//                              -0.0000, 0.0000, -0.0000, 1.0000);
 
 cv::Matx33f K(2.66666667e+03, 0.00000000e+00, 9.60000000e+02,
               0.00000000e+00, 2.66666667e+03, 5.40000000e+02,
               0.00000000e+00, 0.00000000e+00, 1.00000000e+00);
+
+cv::Matx44f transform_matrix( 0.6330, -0.1116, -0.7660,  0.0936,
+            -0.2268,  0.9194, -0.3214, -0.1354,
+             0.7402,  0.3772,  0.5567, -2.8236,
+            -0.0000,  0.0000, -0.0000,  1.0000);
+
+// std::string mesh_path = "/nas/3D-MAE/ShapeNet/model_v2/ShapeNetCore.v2/02691156/1bdeb4aaa0aaea4b4f95630cc18536e0/models/model_normalized.obj"; // plane
+// std::string mesh_path = "/nas/3D-MAE/ShapeNet/model_v2/ShapeNetCore.v2/02876657/1d4480abe9aa45ce51a99c0e19a8a54/models/model_normalized.obj";
+// std::string mesh_path = "/nas/3D-MAE/ShapeNet/model_v2/ShapeNetCore.v2/03085013/7e984643df66189454e185afc91dc396/models/model_normalized.obj";
+std::string mesh_path = "/home/jxr/Downloads/car.obj";
 
 void load_mesh_init(std::string mesh_path, TriangularTable& triangular_table)
 {
@@ -59,7 +69,7 @@ void load_mesh_init(std::string mesh_path, TriangularTable& triangular_table)
                 // If the color doesn't exist, set it to white
                 diffuse = aiColor4D(1.0f, 1.0f, 1.0f, 1.0f);
             }
-            cv::Vec3f color = cv::Vec3f(diffuse.r * 255, diffuse.g * 255, diffuse.b * 255);
+            cv::Vec3f color = cv::Vec3f(diffuse.b * 255, diffuse.g * 255, diffuse.r * 255);
             std::vector<cv::Point2i> points;
             std::vector<float> z_depths;
             // Iterate over the face's vertices
@@ -95,17 +105,17 @@ void load_mesh_init(std::string mesh_path, TriangularTable& triangular_table)
             triangular_table.add_triangular(triangular);
         }
     }
+    cv::imwrite("scanline_image.png", image);
 
     triangular_table.summary();
-
-    // Save the image to a file
-    cv::imwrite("image.png", image);
 }
 
 void scanline_zbuffer(TriangularTable& triangular_table)
 {
     cv::Mat frame_buffer(SCREEN_HEIGHT, SCREEN_WIDTH, CV_32FC3);
+    cv::Mat mask(SCREEN_HEIGHT, SCREEN_WIDTH, CV_32FC3);
     cv::Mat z_buffer(SCREEN_HEIGHT, SCREEN_WIDTH, CV_32FC1);
+    z_buffer.setTo(1e10);
 
     // Scan each row of the screen
     for (int y = SCREEN_HEIGHT-1; y >= 0; y--)
@@ -113,9 +123,32 @@ void scanline_zbuffer(TriangularTable& triangular_table)
         // scan triangular_table, add EdgePair from new Triangular
         triangular_table.update_table(y);
 
+        std::cout << "\ny: " << y << " ";
         for (auto it = triangular_table.active_edgepairs.begin(); it != triangular_table.active_edgepairs.end();)
         {
-            // update activate_edgepairs, increase x_now of each edge
+            if (it->type == EdgePair::SINGLE){
+                std::cout << "\n SINGLE y: " << y << std::endl;
+                // std::cout << it->right.x_now << std::endl;
+            }
+            std::cout << &(*it) << " " ;
+
+            // render at the current line
+            for(int x = it->left->x_now; x <= it->right->x_now; x++){
+                cv::Point2i p(x,y);
+                // Compute the Z value of the current pixel
+                float z = it->left->z_start + it->triangular->dz_dx * (x - it->left->x_now) + it->triangular->dz_dy * (it->left->y_max - y);
+
+                // Check if the current pixel is closer to the viewer than the pixel in the Z buffer
+                if (z < z_buffer.at<float>(p))
+                {
+                    // Update the pixel color and Z value in the Z buffer
+                    frame_buffer.at<cv::Vec3f>(p) = it->triangular->color;
+                    mask.at<cv::Vec3f>(p) = cv::Vec3f(255, 255, 255); 
+                    z_buffer.at<float>(p) = z;
+                }
+            }
+
+            // after scan this line, update activate_edgepairs, increase x_now of each edge
             if(it->update(y)){ // if the edgepair is still active
                 it++;
             }
@@ -123,23 +156,10 @@ void scanline_zbuffer(TriangularTable& triangular_table)
                 it = triangular_table.active_edgepairs.erase(it);
             }
         }
-
-        // Scan each column of the screen
-        // for (int x = 0; x < SCREEN_WIDTH; ++x)
-        // {
-        //     cv::Point2i p(x,y);
-        //     // Compute the Z value of the current pixel
-        //     float z = 0;
-
-        //     // Check if the current pixel is closer to the viewer than the pixel in the Z buffer
-        //     if (z < z_buffer.at<float>(p))
-        //     {
-        //         // Update the pixel color and Z value in the Z buffer
-        //         // set_pixel_color(x, y, compute_color(x, y));
-        //         z_buffer.at<float>(p) = z;
-        //     }
-        // }
     }
+    // Save the image to a file
+    cv::imwrite("scanline.png", frame_buffer);
+    cv::imwrite("scanline_mask.png", mask);
 }
 
 int main(int argc, char **argv) 
@@ -150,7 +170,6 @@ int main(int argc, char **argv)
 
     std::cout << "---------------------stage 1: load mesh & project------------------" << std::endl;
 
-    std::string mesh_path = "/nas/3D-MAE/ShapeNet/model_v2/ShapeNetCore.v2/02691156/1bdeb4aaa0aaea4b4f95630cc18536e0/models/model_normalized.obj"; // plane
     // load 3D mesh & create
     load_mesh_init(mesh_path, triangular_table);
 
