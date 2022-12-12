@@ -10,6 +10,7 @@ include_directories(
 # Add the library directories
 link_directories(
     /usr/lib/x86_64-linux-gnu
+    /home/jxr/code/CG/zbuffer/lib
 )
 # Find the Assimp library
 find_package(Assimp REQUIRED)
