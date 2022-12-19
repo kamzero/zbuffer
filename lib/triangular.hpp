@@ -155,7 +155,7 @@ public:
     // }
 
     // activate triangular, add intersected edges to active_edges
-    EdgePair activate(int y_now) {
+    EdgePair* activate(int y_now) {
         this->is_active = true;
         Edge* remain_edge = NULL;
         // return the EdgePair intersected with the scanline at y_now
@@ -170,21 +170,19 @@ public:
 
         if (this->active_edges.size() == 2) {
             if (remain_edge != NULL){
-                EdgePair ep(&(this->active_edges[0]), &(this->active_edges[1]), remain_edge, this);
+                auto ep = new EdgePair(&(this->active_edges[0]), &(this->active_edges[1]), remain_edge, this);
                 return ep;
             }
             else {
-                EdgePair ep(&(this->active_edges[0]), &(this->active_edges[1]), this);
+                auto ep = new EdgePair(&(this->active_edges[0]), &(this->active_edges[1]), this);
                 return ep;
             }
         }
-        else{
-            std::cout << "\n***********ERROR*********** " << y_now << std::endl;
-            EdgePair ep(&(this->active_edges[0]), this);
-            std::cout << "\n***********ERROR*********** " << ep.left->x_start << std::endl;
-
+        else if (this->active_edges.size() == 1) {
+            auto ep = new EdgePair(&(this->active_edges[0]), this);
             return ep;
         }
+        return nullptr;
     }
 
     void deactivate() {

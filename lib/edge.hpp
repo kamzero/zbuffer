@@ -93,7 +93,7 @@ struct Edge
     // update while scanline increases
     bool update(int y_now) {
         this->x_now -= this->dx_dy; 
-        if(y_now == this->y_min) {
+        if(y_now <= this->y_min) {
             deactivate();
             return false;
         }
@@ -119,10 +119,12 @@ struct EdgePair{
     Edge* right = nullptr;
     Edge* remain = nullptr;
     
-    EdgePair(Edge* el, const Triangular* triangular): left(el), right(el), triangular(triangular), type(SINGLE) {
-        std::cout << "line init" << std::endl;
+    EdgePair(Edge* el, const Triangular* triangular): left(el), triangular(triangular), type(SINGLE) {
+        this->right = this->left;
     }
     EdgePair(Edge* el, Edge* er, const Triangular* triangular): left(el), right(er), triangular(triangular), type(PAIR) {}
+
+
     EdgePair(Edge* el, Edge* er, Edge* pr, const Triangular* triangular): left(el), right(er), remain(pr), triangular(triangular), type(PAIR) {}
 
     EdgePair& operator= (const EdgePair& edge_pair) {
@@ -141,6 +143,7 @@ struct EdgePair{
         else if (this->remain == nullptr) {
             return this->left->update(y_now) && this->right->update(y_now);
         }
+        else if(this->left->update(y_now) && this->right->update(y_now)) return true;
         else {
             // activate the remain edge
             this->remain->set_x_now(y_now);

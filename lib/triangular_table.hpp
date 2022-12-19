@@ -57,9 +57,11 @@ public:
         for (auto& triangular: this->triangulars[y_now]) {
             // if(triangular.type != Triangular::NORMAL) continue;
 
-            if (triangular.type == Triangular::NORMAL || triangular.type == Triangular::NORMAL){
+            if (triangular.type != Triangular::ERROR){
+            // if (triangular.type == Triangular::NORMAL){
                 auto ep = triangular.activate(y_now);
-                this->active_edgepairs.push_back(ep);
+                if(ep != nullptr)
+                    this->active_edgepairs.push_back(*ep);
             }
         }
     }
