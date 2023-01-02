@@ -17,15 +17,24 @@ find_package(Assimp REQUIRED)
 # Find the OpenGL library
 find_package(OpenGL REQUIRED)
 find_package(OpenCV REQUIRED)
+find_package(FLTK REQUIRED)
+
+include_directories(${FLTK_INCLUDE_DIRS})
 
 # Add the source files for your project
 set(SOURCES scanline.cpp)
 
 # Create the executable for your project
 add_executable(scanline ${SOURCES})
-
 # Link the Assimp library to your project
 target_link_libraries(scanline PRIVATE OpenGL::GL)
 target_link_libraries(scanline PRIVATE ${OpenCV_LIBS})
 # target_link_libraries(scanline PRIVATE ${Assimp_LIBS})
 target_link_libraries(scanline PRIVATE assimp)
+
+# add_executable(ui src/ui.cpp)
+# target_link_libraries(ui ${FLTK_LIBRARIES})
+
+# add_executable(axes src/axes.cpp)
+# target_link_libraries(axes PRIVATE OpenGL::GL)
+

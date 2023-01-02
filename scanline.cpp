@@ -3,7 +3,7 @@
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
-#include <assimp/material.h> // aiMaterial class
+#include <assimp/material.h>
 #include <GL/gl.h>
 #include <opencv2/core.hpp>
 #include <opencv2/opencv.hpp>
@@ -17,7 +17,6 @@
 //                              -0.2268, 0.9194, -0.3214, -0.0677,
 //                              0.7402, 0.3772, 0.5567, -1.4118,
 //                              -0.0000, 0.0000, -0.0000, 1.0000);
-
 cv::Matx33f K(2.66666667e+03, 0.00000000e+00, 9.60000000e+02,
               0.00000000e+00, 2.66666667e+03, 5.40000000e+02,
               0.00000000e+00, 0.00000000e+00, 1.00000000e+00);
@@ -27,8 +26,8 @@ cv::Matx44f transform_matrix( 0.6330, -0.1116, -0.7660,  0.0936,
              0.7402,  0.3772,  0.5567, -2.8236,
             -0.0000,  0.0000, -0.0000,  1.0000);
 
-// std::string mesh_path = "/nas/3D-MAE/ShapeNet/model_v2/ShapeNetCore.v2/02691156/1bdeb4aaa0aaea4b4f95630cc18536e0/models/model_normalized.obj"; // plane
-std::string mesh_path = "/nas/3D-MAE/ShapeNet/model_v2/ShapeNetCore.v2/02876657/1d4480abe9aa45ce51a99c0e19a8a54/models/model_normalized.obj";
+std::string mesh_path = "/nas/3D-MAE/ShapeNet/model_v2/ShapeNetCore.v2/02691156/1bdeb4aaa0aaea4b4f95630cc18536e0/models/model_normalized.obj"; // plane
+// std::string mesh_path = "/nas/3D-MAE/ShapeNet/model_v2/ShapeNetCore.v2/02876657/1d4480abe9aa45ce51a99c0e19a8a54/models/model_normalized.obj";
 // std::string mesh_path = "/nas/3D-MAE/ShapeNet/model_v2/ShapeNetCore.v2/03085013/7e984643df66189454e185afc91dc396/models/model_normalized.obj";
 // std::string mesh_path = "/home/jxr/Downloads/car.obj";
 
@@ -77,8 +76,6 @@ void load_mesh_init(std::string mesh_path, TriangularTable& triangular_table)
             std::vector<float> z_depths;
             
             // Iterate over the face's vertices
-            std::cout << j << " ";
-
             for (unsigned int k = 0; k < face.mNumIndices; ++k)
             {
                 // Get the current vertex
@@ -95,12 +92,12 @@ void load_mesh_init(std::string mesh_path, TriangularTable& triangular_table)
                 cv::projectPoints(point3D, rvec, tvec, K, cv::Mat(), point2D);
                 cv::Point2i point2D_int(point2D[0].x, point2D[0].y);
 
-                // // check if the point is in the image
-                // if (point2D_int.x < 0 || point2D_int.x >= SCREEN_WIDTH || point2D_int.y < 0 || point2D_int.y >= SCREEN_HEIGHT || z_depth < 0){
-                //     std::cout << "point out of image" << std::endl;
-                //     // TODO: deal with this case
-                //     continue;
-                // }
+                // check if the point is in the image
+                if (point2D_int.x < 0 || point2D_int.x >= SCREEN_WIDTH || point2D_int.y < 0 || point2D_int.y >= SCREEN_HEIGHT){
+                    // std::cout << "point out of image" << std::endl;
+                    // TODO: deal with this case
+                    continue;
+                }
 
                 points.push_back(point2D_int);
                 z_depths.push_back(z_depth);
